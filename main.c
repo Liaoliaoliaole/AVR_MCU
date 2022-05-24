@@ -1,5 +1,4 @@
-/*  flush led left to right and right to left
- * fengmingqi.c
+/*  flush led left to right and right to left (two method, so two int main function)
  *
  * Created: 2022/5/18 11:23:26
  * Author : tende
@@ -34,4 +33,26 @@ int main(void)
 
     }
 }
+
+
+
+unsigned char display_led1[8]={0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+int main (){
+		//char i;
+		DDRC=0xff;
+		PORTC=0xff;
+		while (1)
+		{
+			PORTC ^= (1<<PC5);
+			_delay_ms(500);
+			for(int i=0;i<8;i++){
+				PORTC=~display_led1[i];
+				_delay_ms(500);
+			}
+			for(int8_t i=7;i>=0 ;i--){
+				PORTC=~display_led1[i];
+				_delay_ms(100);
+			}
+		}
+	}
 
