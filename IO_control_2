@@ -1,0 +1,45 @@
+/* close curtain and open curtain led
+ * lamubimuled.c
+ *
+ * Created: 2022/5/19 12:31:51
+ * Author : tende
+ */ 
+
+#include <avr/io.h>
+#define F_CPU 8000000UL
+#include<util/delay.h>
+
+
+
+int main(void)
+{
+	unsigned int i,j,k,LED;
+	DDRC=0xff;
+	PORTC=0xff;
+	
+	while (1)
+	{
+		j=0x08;
+		k=0x10;
+		for(i=0;i<4;i++){
+			LED=j|k;
+			PORTC=~LED;
+			_delay_ms(500);
+			j=(j<<1)+0x08;
+			k=(k>>1)+0x10;
+		}
+		LED =0xff;
+		PORTC=~LED;//??
+		_delay_ms(500);
+		j=0x01;
+		k=0x80;
+		for(i=0;i<8;i++){
+			LED=j|k;
+			PORTC=LED;//??
+			_delay_ms(500);
+			j=(j<<1)+0x01;
+			k=(k>>1)+0x80;
+		}
+
+	}
+}
