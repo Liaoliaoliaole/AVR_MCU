@@ -1,0 +1,75 @@
+/* scan each button if pushed down, and show 0-7 on 7segment display according to the button
+ * s7segment1.c
+ *
+ * Created: 2022/5/19 14:21:44
+ * Author : tende
+ */ 
+
+#include <avr/io.h>
+#define F_CPU 8000000UL
+#include<util/delay.h>
+//#define BIT(x)  (1 << (x))
+
+unsigned char LED_table[8]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07};//7segment0-7
+
+void port_init(){
+	DDRA=0xff;
+	PORTA=0x00;//7seg all shutdown
+	DDRB=0x00;//output
+	PORTB=0xff;
+	}
+
+	
+int main(void)
+{
+	unsigned char key;
+	//unsigned char k;
+	port_init();
+	_delay_ms(1000);
+	
+    while (1) 
+    {
+		
+		//for(k=0;k<8;k++){
+			//PORTA=LED_table[k];
+			//_delay_ms(500);
+		//}
+		while (PINB==0xff)//wait for the button be pushed
+		{
+			_delay_ms(10);//anti doudong
+			while (PINB==0xff);
+			//while()with ; check if condition== false, continue loop once, if condition== true, not loop rest of code
+			{
+				key=PINB;
+				switch (key)
+				{
+				case 0xfe://0xff|BIT(0)
+				PORTA=LED_table[0];
+				break;
+				case 0xfd://0xff|BIT(1)
+				PORTA=LED_table[1];
+				break;
+				case 0xfb://0xff|BIT(2)
+				PORTA=LED_table[2];
+				break;
+				case 0xf7://0xff|BIT(3)
+				PORTA=LED_table[3];
+				break;
+				case 0xef://0xff|BIT(4)
+				PORTA=LED_table[4];
+				break;
+				case 0xdf://0xff|BIT(5)
+				PORTA=LED_table[5];
+				break;
+				case 0xbf://0xff|BIT(6)
+				PORTA=LED_table[6];
+				break;
+				case 0x7f://0xff|BIT(7)
+				PORTA=LED_table[7];
+				break;
+				}
+			}
+		}
+    }
+}
+
