@@ -1,0 +1,50 @@
+/*
+ * s7segment2.c
+ *
+ * Created: 2022/5/20 11:01:26
+ * Author : tende
+ */ 
+
+#include <avr/io.h>
+#define F_CPU 8000000UL
+#include<util/delay.h>
+
+unsigned char scanKey()
+{
+	unsigned char data;//composite key button code
+	DDRC = 0x0f;//row line input(0), column line output(f)
+	PORTC = 0xf0;//row line pull up(f)?column output low sig(0)
+	if(PINC!=0xf0)//if button down(if row line all high sig, no push down button: ==0xf0)
+	{
+		_delay_ms(10);//debounce
+		if(PINC!=0xf0)//check button statue again
+		{
+			data=PINC&0xf0;//read key pad(left 4 bit someone becomes 0,get that to find row position)		
+			DDRC = 0xf0;//toggle above steps, row line output,column line input
+			_delay_ms(1);
+			PORTC=0x0f;//row line output low,column line input pull up
+			_delay_ms(1);
+			data|=(PINC&0x0f);//at this moment, button still down,now we could find column position
+			return data;
+		}
+	}
+	return 0xff;//if no pushed button
+}
+
+int main()
+{
+	unsigned char key;
+	DDRD = 0xff;//putting portD as output pins
+	_delay_ms(50);
+	while(1)
+	{
+		key=scanKey();
+		PORTD=key;
+		
+		if(key!=0xff)//if key is not previous key
+		{
+			key=0xff;
+		}
+		_delay_ms(500);
+	}
+}
