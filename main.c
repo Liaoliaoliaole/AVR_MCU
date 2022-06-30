@@ -1,38 +1,29 @@
-/*flash an LED every 50 ms (you can surely see the LED flashing this time ;)). We have an XTAL of 16 MHz.
-Methodology – Using Interrupts
-So now, we have to flash the LED every 50 ms. With CPU frequency 16 MHz, even a maximum delay of 16.384 ms can be achieved using a 1024 prescaler. So what do we do now? Well, we use interrupts.
-
-The concept here is that the hardware generates an interrupt every time the timer overflows. Since the required delay is greater than the maximum possible delay, obviously the timer will overflow. And whenever the timer overflows, an interrupt is fired. Now the question is how many times should the interrupt be fired?
-
-For this, let’s do some calculation. Let’s choose a prescaler, say 256. Thus, as per the calculations, it should take 4.096 ms for the timer to overflow. Now as soon as the timer overflows, an interrupt is fired and an Interrupt Service Routine (ISR) is executed. Now,
-
-50 ms ÷ 4.096 ms = 12.207
-
-Thus, in simple terms, by the time the timer has overflown 12 times, 49.152 ms would have passed. After that, when the timer undergoes 13th iteration, it would achieve a delay of 50 ms. Thus, in the 13th iteration, we need a delay of 50 – 49.152 = 0.848 ms. At a frequency of 62.5 kHz (prescaler = 256), each tick takes 0.016 ms. Thus to achieve a delay of 0.848 ms, it would require 53 ticks. Thus, in the 13th iteration, we only allow the timer to count up to 53, and then reset it. All this can be achieved in the ISR as follows:
- * timer0.c
+/*We need to flash an LED every 2 seconds, i.e. at a frequency of 0.5 Hz. We have an XTAL of 16 MHz.
+ Given that we have a CPU Clock Frequency of 16 MHz. At this frequency, and using a 16-bit timer (MAX = 65535), the maximum delay is 4.096 ms. It’s quite low. Upon using a prescaler of 8, the timer frequency reduces to 2 MHz, thus giving a maximum delay of 32.768 ms. Now we need a delay of 2 s. Thus, 2 s ÷ 32.768 ms = 61.035 ? 61. This means that the timer should overflow 61 times to give a delay of approximately 2 s.* 
+ timer1.c
  *
- * Created: 2022/6/14 13:28:25
+ * Created: 2022/6/15 13:01:45
  * Author : tende
  */ 
 
 #include <avr/io.h>
 #define F_CPU 16000000UL
-//#include <util/delay.h>
 #include <avr/interrupt.h>
 
 // global variable to count the number of overflows
 volatile uint8_t tot_overflow;
 
-void timer0_init()
+// initialize timer, interrupt and variable
+void timer1_init()
 {
-	// set up timer with prescaler = 256
-	TCCR0 |= (1 << CS02);
+	// set up timer with prescaler = 8
+	TCCR1B |= (1 << CS11);
 	
 	// initialize counter
-	TCNT0 = 0;
+	TCNT1 = 0;
 	
 	// enable overflow interrupt
-	TIMSK |= (1 << TOIE0);
+	TIMSK |= (1 << TOIE1);
 	
 	// enable global interrupts
 	sei();
@@ -41,12 +32,23 @@ void timer0_init()
 	tot_overflow = 0;
 }
 
-// TIMER0 overflow interrupt service routine
-// called whenever TCNT0 overflows
-ISR(TIMER0_OVF_vect)
+// TIMER1 overflow interrupt service routine
+// called whenever TCNT1 overflows
+ISR(TIMER1_OVF_vect)
 {
 	// keep a track of number of overflows
 	tot_overflow++;
+	
+	// check for number of overflows here itself
+	// 61 overflows = 2 seconds delay (approx.)
+	if (tot_overflow >= 61) // NOTE: '>=' used instead of '=='
+	{
+		PORTC ^= (1 << 0);  // toggles the led
+		// no timer reset required here as the timer
+		// is reset every time it overflows
+		
+		tot_overflow = 0;   // reset overflow counter
+	}
 }
 
 int main(void)
@@ -55,21 +57,13 @@ int main(void)
 	DDRC |= (1 << 0);
 	
 	// initialize timer
-	timer0_init();
+	timer1_init();
 	
 	// loop forever
 	while(1)
 	{
-		// check if no. of overflows = 12
-		if (tot_overflow >= 12)  // NOTE: '>=' is used
-		{
-			// check if the timer count reaches 53
-			if (TCNT0 >= 53)
-			{
-				PORTC ^= (1 << 0);    // toggles the led
-				TCNT0 = 0;            // reset counter
-				tot_overflow = 0;     // reset overflow counter
-			}
-		}
+		// do nothing
+		// comparison is done in the ISR itself
 	}
 }
+
