@@ -1,69 +1,73 @@
-/*We need to flash an LED every 2 seconds, i.e. at a frequency of 0.5 Hz. We have an XTAL of 16 MHz.
- Given that we have a CPU Clock Frequency of 16 MHz. At this frequency, and using a 16-bit timer (MAX = 65535), the maximum delay is 4.096 ms. It’s quite low. Upon using a prescaler of 8, the timer frequency reduces to 2 MHz, thus giving a maximum delay of 32.768 ms. Now we need a delay of 2 s. Thus, 2 s ÷ 32.768 ms = 61.035 ? 61. This means that the timer should overflow 61 times to give a delay of approximately 2 s.* 
- timer1.c
+/* generate a 50 Hz PWM signal having 45% duty cycle, ctc mode
+Frequency = 50 Hz
+In other words, the time period, T
+T = T(on) + T(off) = 1/50 = 0.02 s = 20 ms
+Also, given that
+Duty Cycle = 45%
+Thus, solving according to equation given above, we get
+T(on)  = 9 ms
+T(off) = 11 ms
+ * timerctcmode.c
  *
- * Created: 2022/6/15 13:01:45
+ * Created: 2022/6/15 13:09:04
  * Author : tende
  */ 
 
 #include <avr/io.h>
-#define F_CPU 16000000UL
+//#define F_CPU 8000000UL
 #include <avr/interrupt.h>
 
-// global variable to count the number of overflows
-volatile uint8_t tot_overflow;
+uint8_t count = 0;               // global counter
 
 // initialize timer, interrupt and variable
 void timer1_init()
 {
-	// set up timer with prescaler = 8
-	TCCR1B |= (1 << CS11);
-	
+	// set up timerX with 8x prescaler and CTC mode
+	TCCR1B |= (1 << WGM12)|(1 << CS11);
 	// initialize counter
 	TCNT1 = 0;
-	
-	// enable overflow interrupt
-	TIMSK |= (1 << TOIE1);
-	
+	// initialize compare value
+	OCR1A = 19999;//8M/8*20*0.001-1
+	// enable compare interrupt
+	TIMSK |= (1 << OCIE1A);
 	// enable global interrupts
 	sei();
-	
-	// initialize overflow counter variable
-	tot_overflow = 0;
 }
 
-// TIMER1 overflow interrupt service routine
-// called whenever TCNT1 overflows
-ISR(TIMER1_OVF_vect)
+// process the ISR that is fired
+ISR (TIMER1_COMPA_vect)
 {
-	// keep a track of number of overflows
-	tot_overflow++;
+	// do whatever you want to do here
+	// say, increment the global counter
+	count++;
 	
-	// check for number of overflows here itself
-	// 61 overflows = 2 seconds delay (approx.)
-	if (tot_overflow >= 61) // NOTE: '>=' used instead of '=='
+	// check for the global counter
+	// if count == odd, delay required = 11 ms
+	// if count == even, delay required = 9 ms
+	// thus, the value of the OCRx should be constantly updated
+	if (count % 2 == 0)
 	{
-		PORTC ^= (1 << 0);  // toggles the led
-		// no timer reset required here as the timer
-		// is reset every time it overflows
-		
-		tot_overflow = 0;   // reset overflow counter
+		OCR1A = 8999;      // calculate and substitute appropriate value
+		PORTC |= (1<<PC0);
+	}
+	else{
+	OCR1A = 10999;     // calculate and substitute appropriate value
+	PORTC &= ~(1<<PC0);
 	}
 }
 
 int main(void)
 {
-	// connect led to pin PC0
+	// initialize the output pin, say PC0
 	DDRC |= (1 << 0);
 	
-	// initialize timer
+	// initialize timerX
 	timer1_init();
 	
 	// loop forever
 	while(1)
 	{
 		// do nothing
-		// comparison is done in the ISR itself
+		
 	}
 }
-
